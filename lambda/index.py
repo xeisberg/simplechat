@@ -70,14 +70,15 @@ def lambda_handler(event, context):
                 })
         
         # invoke_model用のリクエストペイロード
+        
         request_payload = {
             "messages": bedrock_messages,
             "inferenceConfig": {
-                "maxTokens": 512,
+                "max_new_tokens": 1000,
                 "stopSequences": [],
                 "temperature": 0.7,
                 "topP": 0.9
-            }
+              }
         }
         
         print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
@@ -86,7 +87,8 @@ def lambda_handler(event, context):
         response = bedrock_client.invoke_model(
             modelId=MODEL_ID,
             body=json.dumps(request_payload),
-            contentType="application/json"
+            contentType="application/json",
+            accept="application/json"
         )
         
         # レスポンスを解析
