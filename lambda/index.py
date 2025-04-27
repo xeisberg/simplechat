@@ -18,7 +18,7 @@ def extract_region_from_arn(arn):
 bedrock_client = None
 
 # モデルID
-MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
+MODEL_ID = os.environ.get("MODEL_ID", "amazon.nova-lite-v1:0")
 
 def lambda_handler(event, context):
     try:
