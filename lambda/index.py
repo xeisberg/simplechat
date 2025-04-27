@@ -12,7 +12,7 @@ def extract_region_from_arn(arn):
     match = re.search('arn:aws:lambda:([^:]+):', arn)
     if match:
         return match.group(1)
-    return "us-east-1"  # デフォルト値
+    return "ap-northeast-1"  # デフォルト値
 
 # グローバル変数としてクライアントを初期化（初期値）
 bedrock_client = None
