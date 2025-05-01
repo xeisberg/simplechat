@@ -4,6 +4,7 @@ import os
 import boto3
 import re  # 正規表現モジュールをインポート
 from botocore.exceptions import ClientError
+import requests
 
 
 # Lambda コンテキストからリージョンを抽出する関数
@@ -19,6 +20,10 @@ bedrock_client = None
 
 # モデルID
 MODEL_ID = os.environ.get("MODEL_ID", "amazon.nova-lite-v1:0")
+
+NGROK_URL = os.environ.get("NGROK_URL","https://7988-34-142-255-108.ngrok-free.app" )
+GENERATE_PATH = "/generate"
+full_url = NGROK_URL.rstrip("/") + GENERATE_PATH
 
 def lambda_handler(event, context):
     try:
@@ -66,42 +71,48 @@ def lambda_handler(event, context):
             elif msg["role"] == "assistant":
                 bedrock_messages.append({
                     "role": "assistant", 
-                    "content": [{"text": msg["content"]}]
-                })
-        
-        # invoke_model用のリクエストペイロード
-        
+                        "content": [{"text": msg["content"]}]
+                    })
+            
+            # invoke_model用のリクエストペイロード
+            
+               # Build the FastAPI payload exactly as in your curl example:
         request_payload = {
-            "messages": bedrock_messages,
-            "inferenceConfig": {
-                "max_new_tokens": 1000,
-                "stopSequences": [],
-                "temperature": 0.7,
-                "topP": 0.9
-              }
+            "prompt": message,
+            "max_new_tokens": 512,
+            "do_sample": True,
+            "temperature": 0.7,
+            "top_p": 0.9
         }
+        print("Calling FastAPI /generate with payload:", json.dumps(request_payload))
         
-        print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
+        headers = {
+            "accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        # If API Gateway passed an Authorization header, forward it to FastAPI
+        auth = event.get("headers", {}).get("authorization")
+        if auth:
+            headers["Authorization"] = auth
         
-        # invoke_model APIを呼び出し
-        response = bedrock_client.invoke_model(
-            modelId=MODEL_ID,
-            body=json.dumps(request_payload),
-            contentType="application/json",
-            accept="application/json"
+        # Call your FastAPI /generate endpoint
+        response = requests.post(
+            "https://7988-34-142-255-108.ngrok-free.app/generate",
+            headers=headers,
+            json=request_payload
         )
         
         # レスポンスを解析
-        response_body = json.loads(response['body'].read())
-        print("Bedrock response:", json.dumps(response_body, default=str))
+        response_body = response.json()
+        print("FastAPI response:", json.dumps(response_body, ensure_ascii=False))
         
-        # 応答の検証
-        if not response_body.get('output') or not response_body['output'].get('message') or not response_body['output']['message'].get('content'):
-            raise Exception("No response content from the model")
+        # Example response validation
+        if "generated_text" not in response_body:
+            raise Exception("No 'generated_text' in FastAPI response")
         
         # アシスタントの応答を取得
-        assistant_response = response_body['output']['message']['content'][0]['text']
-        
+        assistant_response = response_body["generated_text"]
+            
         # アシスタントの応答を会話履歴に追加
         messages.append({
             "role": "assistant",
