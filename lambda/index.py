@@ -97,7 +97,7 @@ def lambda_handler(event, context):
         
         # Call your FastAPI /generate endpoint
         response = requests.post(
-            "https://7988-34-142-255-108.ngrok-free.app/generate",
+            full_url,
             headers=headers,
             json=request_payload
         )
